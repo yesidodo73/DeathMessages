@@ -79,7 +79,7 @@ public class EntityDeath implements Listener {
                     if (killerCtx != null && killerCtx.isKillerBlacklisted()) {
                         return;
                     }
-                    applyKillLogSpamPrevention(killerCtx, killer.getUniqueId(), player.getUniqueId());
+                    applyKillLogSpamPrevention(killerCtx, playerCtx, killer.getUniqueId(), player.getUniqueId());
                 }
                 boolean gangKill = false;
 
@@ -185,8 +185,8 @@ public class EntityDeath implements Listener {
         }
     }
 
-    private void applyKillLogSpamPrevention(PlayerCtx killerCtx, UUID killerUUID, UUID victimUUID) {
-        if (killerCtx == null || !FileStore.CONFIG.getBoolean(Config.KILL_LOG_SPAM_PREVENTION_ENABLED)) {
+    private void applyKillLogSpamPrevention(PlayerCtx killerCtx, PlayerCtx victimCtx, UUID killerUUID, UUID victimUUID) {
+        if (killerCtx == null || victimCtx == null || !FileStore.CONFIG.getBoolean(Config.KILL_LOG_SPAM_PREVENTION_ENABLED)) {
             return;
         }
 
@@ -228,5 +228,7 @@ public class EntityDeath implements Listener {
         long until = now + (blacklistSeconds * 1000L);
         killerCtx.setKillerBlacklisted(false);
         killerCtx.setKillerBlacklistedUntil(until);
+        victimCtx.setBlacklisted(false);
+        victimCtx.setBlacklistedUntil(until);
     }
 }

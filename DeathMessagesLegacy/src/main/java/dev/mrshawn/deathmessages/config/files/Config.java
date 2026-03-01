@@ -83,7 +83,7 @@ public enum Config {
     COOLDOWN("Cooldown", 0),
 
     KILL_LOG_SPAM_PREVENTION_ENABLED("Kill-Log-Spam-Prevention.Enabled", true),
-    KILL_LOG_SPAM_PREVENTION_WINDOW_SECONDS("Kill-Log-Spam-Prevention.Window-Seconds", 5),
+    KILL_LOG_SPAM_PREVENTION_WINDOW_SECONDS("Kill-Log-Spam-Prevention.Window-Seconds", 10),
     KILL_LOG_SPAM_PREVENTION_SAME_TARGET_KILLS("Kill-Log-Spam-Prevention.Same-Target-Kills", 3),
     KILL_LOG_SPAM_PREVENTION_BLACKLIST_SECONDS("Kill-Log-Spam-Prevention.Blacklist-Seconds", 1800),
 
