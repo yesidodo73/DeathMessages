@@ -6,6 +6,8 @@ import dev.mrshawn.deathmessages.api.PlayerCtx;
 import dev.mrshawn.deathmessages.api.events.BroadcastDeathMessageEvent;
 import dev.mrshawn.deathmessages.api.events.BroadcastEntityDeathMessageEvent;
 import dev.mrshawn.deathmessages.config.Gangs;
+import dev.mrshawn.deathmessages.config.files.Config;
+import dev.mrshawn.deathmessages.config.files.FileStore;
 import dev.mrshawn.deathmessages.enums.MessageType;
 import dev.mrshawn.deathmessages.enums.MobType;
 import dev.mrshawn.deathmessages.utils.Assets;
@@ -23,9 +25,15 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class EntityDeath implements Listener {
+    private static final Map<UUID, Map<UUID, Deque<Long>>> KILL_HISTORY = new ConcurrentHashMap<UUID, Map<UUID, Deque<Long>>>();
 
     void onEntityDeath(EntityDeathEvent e) {
         // Player death
@@ -71,6 +79,7 @@ public class EntityDeath implements Listener {
                     if (killerCtx != null && killerCtx.isKillerBlacklisted()) {
                         return;
                     }
+                    applyKillLogSpamPrevention(killerCtx, killer.getUniqueId(), player.getUniqueId());
                 }
                 boolean gangKill = false;
 
@@ -174,5 +183,50 @@ public class EntityDeath implements Listener {
         if (DeathMessages.getEventPriority().equals(EventPriority.HIGHEST)) {
             onEntityDeath(e);
         }
+    }
+
+    private void applyKillLogSpamPrevention(PlayerCtx killerCtx, UUID killerUUID, UUID victimUUID) {
+        if (killerCtx == null || !FileStore.CONFIG.getBoolean(Config.KILL_LOG_SPAM_PREVENTION_ENABLED)) {
+            return;
+        }
+
+        int windowSeconds = Math.max(1, FileStore.CONFIG.getInt(Config.KILL_LOG_SPAM_PREVENTION_WINDOW_SECONDS));
+        int triggerKills = Math.max(2, FileStore.CONFIG.getInt(Config.KILL_LOG_SPAM_PREVENTION_SAME_TARGET_KILLS));
+        int blacklistSeconds = Math.max(1, FileStore.CONFIG.getInt(Config.KILL_LOG_SPAM_PREVENTION_BLACKLIST_SECONDS));
+
+        long now = System.currentTimeMillis();
+        long windowMs = windowSeconds * 1000L;
+
+        Map<UUID, Deque<Long>> killerMap = KILL_HISTORY.get(killerUUID);
+        if (killerMap == null) {
+            killerMap = new ConcurrentHashMap<UUID, Deque<Long>>();
+            KILL_HISTORY.put(killerUUID, killerMap);
+        }
+
+        Deque<Long> timeline = killerMap.get(victimUUID);
+        if (timeline == null) {
+            timeline = new ArrayDeque<Long>();
+            killerMap.put(victimUUID, timeline);
+        }
+
+        boolean trigger = false;
+        synchronized (timeline) {
+            while (!timeline.isEmpty() && now - timeline.peekFirst() > windowMs) {
+                timeline.pollFirst();
+            }
+            timeline.addLast(now);
+            if (timeline.size() >= triggerKills) {
+                trigger = true;
+                timeline.clear();
+            }
+        }
+
+        if (!trigger) {
+            return;
+        }
+
+        long until = now + (blacklistSeconds * 1000L);
+        killerCtx.setKillerBlacklisted(false);
+        killerCtx.setKillerBlacklistedUntil(until);
     }
 }
