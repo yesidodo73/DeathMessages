@@ -29,6 +29,9 @@ public class PlayerCtx {
     private final Player player;
     private boolean isMessageEnabled;
     private boolean isBlacklisted;
+    private boolean isKillerBlacklisted;
+    private long blacklistedUntil;
+    private long killerBlacklistedUntil;
     private boolean isCommandDeath;
     private DamageCause damageCause;
     private Entity lastEntityDamager;
@@ -58,14 +61,23 @@ public class PlayerCtx {
                 config.set(uuid + ".username", name);
                 config.set(uuid + ".messages-enabled", true);
                 config.set(uuid + ".is-blacklisted", false);
+                config.set(uuid + ".blacklisted-until", 0L);
+                config.set(uuid + ".is-killer-blacklisted", false);
+                config.set(uuid + ".killer-blacklisted-until", 0L);
                 UserData.getInstance().save();
             }
 
             isMessageEnabled = config.getBoolean(uuid + ".messages-enabled");
             isBlacklisted = config.getBoolean(uuid + ".is-blacklisted");
+            blacklistedUntil = config.getLong(uuid + ".blacklisted-until", 0L);
+            isKillerBlacklisted = config.getBoolean(uuid + ".is-killer-blacklisted", false);
+            killerBlacklistedUntil = config.getLong(uuid + ".killer-blacklisted-until", 0L);
         } else {
             isMessageEnabled = true;
             isBlacklisted = false;
+            blacklistedUntil = 0L;
+            isKillerBlacklisted = false;
+            killerBlacklistedUntil = 0L;
         }
     }
 
@@ -96,7 +108,7 @@ public class PlayerCtx {
     }
 
     public boolean isBlacklisted() {
-        return isBlacklisted;
+        return isBlacklisted || isTimedBlacklistActive(false);
     }
 
     public void setBlacklisted(boolean isBlacklisted) {
@@ -105,6 +117,60 @@ public class PlayerCtx {
             UserData.getInstance().getConfig().set(uuid + ".is-blacklisted", isBlacklisted);
             UserData.getInstance().save();
         }
+    }
+
+    public long getBlacklistedUntil() {
+        return blacklistedUntil;
+    }
+
+    public void setBlacklistedUntil(long blacklistedUntil) {
+        this.blacklistedUntil = blacklistedUntil;
+        if (saveUserData) {
+            UserData.getInstance().getConfig().set(uuid + ".blacklisted-until", blacklistedUntil);
+            UserData.getInstance().save();
+        }
+    }
+
+    public boolean isKillerBlacklisted() {
+        return isKillerBlacklisted || isTimedBlacklistActive(true);
+    }
+
+    public void setKillerBlacklisted(boolean isKillerBlacklisted) {
+        this.isKillerBlacklisted = isKillerBlacklisted;
+        if (saveUserData) {
+            UserData.getInstance().getConfig().set(uuid + ".is-killer-blacklisted", isKillerBlacklisted);
+            UserData.getInstance().save();
+        }
+    }
+
+    public long getKillerBlacklistedUntil() {
+        return killerBlacklistedUntil;
+    }
+
+    public void setKillerBlacklistedUntil(long killerBlacklistedUntil) {
+        this.killerBlacklistedUntil = killerBlacklistedUntil;
+        if (saveUserData) {
+            UserData.getInstance().getConfig().set(uuid + ".killer-blacklisted-until", killerBlacklistedUntil);
+            UserData.getInstance().save();
+        }
+    }
+
+    private boolean isTimedBlacklistActive(boolean killer) {
+        long now = System.currentTimeMillis();
+        long until = killer ? killerBlacklistedUntil : blacklistedUntil;
+        if (until <= 0L) {
+            return false;
+        }
+        if (now < until) {
+            return true;
+        }
+
+        if (killer) {
+            setKillerBlacklistedUntil(0L);
+        } else {
+            setBlacklistedUntil(0L);
+        }
+        return false;
     }
 
     public DamageCause getLastDamageCause() {

@@ -42,25 +42,41 @@ public class TabCompleter implements org.bukkit.command.TabCompleter {
                         "false"
                 );
             } else if (args[0].equalsIgnoreCase("blacklist")) {
-                final List<String> players = new ArrayList<>();
-
-                for (Player player : Bukkit.getServer().getOnlinePlayers()) {
-                    if (player.getName().toLowerCase().startsWith(args[1])) {
-                        players.add(player.getName());
-                    }
-                }
-
-                return players;
+                return Arrays.asList(
+                        "killmessage",
+                        "deathmessage",
+                        "list"
+                );
             } else if (args[0].equalsIgnoreCase("edit")) {
                 return Arrays.asList(
                         "player",
                         "entity"
                 );
             }
+        } else if (args.length == 3 && args[0].equalsIgnoreCase("blacklist")) {
+            if (!args[1].equalsIgnoreCase("killmessage") && !args[1].equalsIgnoreCase("deathmessage")) {
+                return null;
+            }
+            final List<String> players = new ArrayList<>();
+
+            for (Player player : Bukkit.getServer().getOnlinePlayers()) {
+                if (player.getName().toLowerCase().startsWith(args[2])) {
+                    players.add(player.getName());
+                }
+            }
+
+            return players;
         } else if (args.length == 3 && args[0].equalsIgnoreCase("restore")) {
             return Arrays.asList(
                     "true",
                     "false"
+            );
+        } else if (args.length == 4 && args[0].equalsIgnoreCase("blacklist")) {
+            if (!args[1].equalsIgnoreCase("killmessage") && !args[1].equalsIgnoreCase("deathmessage")) {
+                return null;
+            }
+            return Arrays.asList(
+                    "duration"
             );
         }
 

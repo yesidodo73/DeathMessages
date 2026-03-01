@@ -65,6 +65,12 @@ public class EntityDeath implements Listener {
             } else {
                 // Killed by mob
                 Entity ent = playerCtx.getLastEntityDamager();
+                if (ent instanceof Player killer) {
+                    PlayerCtx killerCtx = PlayerCtx.of(killer.getUniqueId());
+                    if (killerCtx != null && killerCtx.isKillerBlacklisted()) {
+                        return;
+                    }
+                }
                 boolean gangKill = false;
 
                 if (Gangs.getInstance().getConfig().getBoolean("Gang.Enabled")) {

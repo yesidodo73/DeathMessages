@@ -30,10 +30,20 @@ public class PlayerUntag implements Listener {
         PlayerCtx playerCtx = PlayerCtx.of(player.getUniqueId());
 
         if (playerCtx == null) return;
+        if (playerCtx.isBlacklisted()) return;
 
         UntagReason reason = e.getUntagReason();
 
         if (!reason.equals(UntagReason.QUIT)) return;
+        if (e.getPreviousEnemies().isEmpty()) return;
+        Entity lastEnemy = e.getPreviousEnemies().get(0);
+        if (lastEnemy instanceof Player) {
+            Player killer = (Player) lastEnemy;
+            PlayerCtx killerCtx = PlayerCtx.of(killer.getUniqueId());
+            if (killerCtx != null && killerCtx.isKillerBlacklisted()) {
+                return;
+            }
+        }
 
         boolean gangKill = false;
 
@@ -58,7 +68,7 @@ public class PlayerUntag implements Listener {
             }
         }
 
-        TextComponent deathMessageBody = Assets.get(gangKill, playerCtx, (LivingEntity) e.getPreviousEnemies().get(0), "CombatLogX-Quit");
+        TextComponent deathMessageBody = Assets.get(gangKill, playerCtx, (LivingEntity) lastEnemy, "CombatLogX-Quit");
         TextComponent[] deathMessage = new TextComponent[2];
 
         if (Settings.getInstance().getConfig().getBoolean(Config.ADD_PREFIX_TO_ALL_MESSAGES.getPath())) {
@@ -71,7 +81,7 @@ public class PlayerUntag implements Listener {
         if (!ComponentUtil.isMessageEmpty(deathMessage)) {
             BroadcastDeathMessageEvent event = new BroadcastDeathMessageEvent(
                     player,
-                    (LivingEntity) e.getPreviousEnemies().get(0),
+                    (LivingEntity) lastEnemy,
                     MessageType.PLAYER,
                     deathMessage,
                     Util.getBroadcastWorlds(player),
