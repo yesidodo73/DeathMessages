@@ -34,6 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class EntityDeath implements Listener {
     private static final Map<UUID, Map<UUID, Deque<Long>>> KILL_HISTORY = new ConcurrentHashMap<>();
+    private static final Map<UUID, Deque<Long>> VICTIM_DEATH_HISTORY = new ConcurrentHashMap<>();
 
     void onEntityDeath(EntityDeathEvent e) {
         // Player death
@@ -197,28 +198,41 @@ public class EntityDeath implements Listener {
         long windowMs = windowSeconds * 1000L;
 
         Map<UUID, Deque<Long>> killerMap = KILL_HISTORY.computeIfAbsent(killerUUID, ignored -> new ConcurrentHashMap<>());
-        Deque<Long> timeline = killerMap.computeIfAbsent(victimUUID, ignored -> new ArrayDeque<>());
+        Deque<Long> killerTimeline = killerMap.computeIfAbsent(victimUUID, ignored -> new ArrayDeque<>());
 
-        boolean trigger = false;
-        synchronized (timeline) {
-            while (!timeline.isEmpty() && now - timeline.peekFirst() > windowMs) {
-                timeline.pollFirst();
+        boolean killerTrigger = false;
+        synchronized (killerTimeline) {
+            while (!killerTimeline.isEmpty() && now - killerTimeline.peekFirst() > windowMs) {
+                killerTimeline.pollFirst();
             }
-            timeline.addLast(now);
-            if (timeline.size() >= triggerKills) {
-                trigger = true;
-                timeline.clear();
+            killerTimeline.addLast(now);
+            if (killerTimeline.size() >= triggerKills) {
+                killerTrigger = true;
+                killerTimeline.clear();
             }
         }
 
-        if (!trigger) {
-            return;
+        Deque<Long> victimTimeline = VICTIM_DEATH_HISTORY.computeIfAbsent(victimUUID, ignored -> new ArrayDeque<>());
+        boolean victimTrigger = false;
+        synchronized (victimTimeline) {
+            while (!victimTimeline.isEmpty() && now - victimTimeline.peekFirst() > windowMs) {
+                victimTimeline.pollFirst();
+            }
+            victimTimeline.addLast(now);
+            if (victimTimeline.size() >= triggerKills) {
+                victimTrigger = true;
+                victimTimeline.clear();
+            }
         }
 
         long until = now + (blacklistSeconds * 1000L);
-        killerCtx.setKillerBlacklisted(false);
-        killerCtx.setKillerBlacklistedUntil(until);
-        victimCtx.setBlacklisted(false);
-        victimCtx.setBlacklistedUntil(until);
+        if (killerTrigger) {
+            killerCtx.setKillerBlacklisted(false);
+            killerCtx.setKillerBlacklistedUntil(until);
+        }
+        if (victimTrigger) {
+            victimCtx.setBlacklisted(false);
+            victimCtx.setBlacklistedUntil(until);
+        }
     }
 }

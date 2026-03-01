@@ -192,7 +192,9 @@ Private-Messages:
 # Default: 0 (disabled)
 Cooldown: 0
 
-# Auto blacklist killer and victim if same killer repeatedly kills same victim in a short window.
+# Auto blacklist:
+# - killer: if same killer repeatedly kills same victim in the window
+# - victim: if victim dies repeatedly in the window (regardless of killer)
 Kill-Log-Spam-Prevention:
   Enabled: true
   # Time window for repeated kills of the same target
